@@ -39,12 +39,7 @@
 #define ftello(stream) ftello64(stream)
 #endif
 
-
-
-//void ReadBlockData(int *data_out, int iStart, int nLength, int nChannels, std::string hsFileName);
-void ReadNWBAttribs(std::string H5_FileName, int &nbChannels, int &resolution, double &samplingRate, int &offset, long &length);
-long GetNWBLength(std::string H5_FileName);
-void ReadBlockData(Array<short> &retrieveData, int iStart, long nLength, int nChannels, std::string hsFileName);
+#include "nwbreader.h"
 
 
 TracesProvider::TracesProvider(const QString& fileUrl,int nbChannels,int resolution,double samplingRate,int offset)
@@ -154,7 +149,8 @@ void TracesProvider::retrieveData(long startTime,long endTime,QObject* initiator
         {
             qDebug() << "NWS";
             // Modified by RHM to read Neurodata Without Borders format
-            ReadBlockData(retrieveData, startInRecordingUnits, nbSamples, nbChannels, fileName.toUtf8().constData());
+            NWBReader nwbr(fileName.toUtf8().constData());
+            nwbr.ReadVoltageData(retrieveData, startInRecordingUnits, nbSamples, nbChannels, fileName.toUtf8().constData());
             qDebug() << "nbSamples " << nbSamples;
         }
         else if ( pNCS != -1 )
@@ -395,7 +391,8 @@ void TracesProvider::computeRecordingLength(){
     if (pNWB != -1)
     {
         // RHM
-        length = GetNWBLength(fileName.toUtf8().constData());
+        NWBReader nwbr(fileName.toUtf8().constData());
+        length = nwbr.GetNWBLength(fileName.toUtf8().constData());
     }
     else if ( pNCS != -1 )
     {

@@ -46,13 +46,8 @@
 #include "positionsprovider.h"
 #include "imagecreator.h"
 #include "utilities.h"
+#include "nwbreader.h"
 
-void getVoltageGroups(Array<short> &indexData, Array<short> &groupData, int channelNb, std::string hsFileName);
-void ReadNWBAttribs(std::string H5_FileName, int &nbChannels, int &resolution, double &samplingRate, int &offset, long &length);
-void ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLength, int nChannels, std::string hsFileName, std::string DSN);
-
-int ReadEvents(/*double *data_out, long &nbEvents,*/ std::string hsFileName, std::string DSN);
-int ReadSpikeShank(std::string hsFileName, std::string DSN);
 
 extern QString version;
 
@@ -269,7 +264,8 @@ void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int,
 //    std::string DSNGroup="general/extracellular_ephys/electrodes/shank_electrode_number";
 //    ReadBlockData2A(groupData, 0, channelNb, 1, hsFileName, DSNGroup);
 
-    getVoltageGroups(indexData, groupData, channelNb, hsFileName);
+    NWBReader nwbr(hsFileName);
+    nwbr.getVoltageGroups(indexData, groupData, channelNb, hsFileName);
 
 
     colorMapList.clear();
@@ -324,9 +320,12 @@ void NeuroscopeDoc::confirmParams()
     if (extension == "nwb")
     {
         qDebug() << "About to NWB";
+        NWBReader nwbr(docUrl.toUtf8().constData());
+        //nwbr.ReadSpikeShank(docUrl.toUtf8().constData(), "units/electrode_group");
+        //return;
         // Neurodata Without Borders (NWB) format
         long lnSamples = 0;
-        ReadNWBAttribs(docUrl.toUtf8().constData(), channelNb, resolution, samplingRate, initialOffset, lnSamples);
+        nwbr.ReadNWBAttribs(docUrl.toUtf8().constData(), channelNb, resolution, samplingRate, initialOffset, lnSamples);
         qDebug() << channelNb << resolution << samplingRate << initialOffset << lnSamples << "\n";
         nbSamples = lnSamples;
         datSamplingRate = samplingRate;
@@ -334,7 +333,8 @@ void NeuroscopeDoc::confirmParams()
         nwbGetColors(displayGroupsChannels, displayChannelsGroups, channelNb, docUrl.toUtf8().constData(), "nothing");
         bNWBColors = true;
 
-        // Working on this June 1, 2019 ReadSpikeShank(docUrl.toUtf8().constData(), "units/electrode_group");
+        // Working on this June 1, 2019
+        //nwbr.ReadSpikeShank(docUrl.toUtf8().constData(), "units/electrode_group");
 
         //std::string DSN_Event = "/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps";
         //ReadEvents(/*double *data_out, long &nbEvents,*/ docUrl.toUtf8().constData(), DSN_Event);

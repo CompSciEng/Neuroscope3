@@ -69,7 +69,10 @@ SOURCES += \
     ./src/tracesprovider.cpp \
     ./src/traceview.cpp \
     ./src/tracewidget.cpp \
-    ./src/ReadHDF5.cpp
+    ./src/ReadHDF5.cpp \
+    src/hdf5utilities.cpp \
+    src/nwblocations.cpp \
+    src/nwbreader.cpp
 
 HEADERS += \
     ./src/baseframe.h \
@@ -120,7 +123,10 @@ HEADERS += \
     ../libklustersshared3/src/shared/itemcolors.h \
     ../libklustersshared3/src/shared/types.h \
     ../libklustersshared3/src/shared/utilities.h \
-    ../libklustersshared3/src/shared/zoomwindow.h
+    ../libklustersshared3/src/shared/zoomwindow.h \
+    src/hdf5utilities.h \
+    src/nwblocations.h \
+    src/nwbreader.h
 
 FORMS += \
         ./src/clusterpropertieslayout.ui  \
