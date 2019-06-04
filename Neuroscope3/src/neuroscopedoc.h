@@ -1147,7 +1147,7 @@ private:
     QImage transformBackgroundImage(bool useWhiteBackground = false);
 
 
-    void nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int, int>& chanGroupMap, int channelNb, std::string hsFileName, std::string DSN);
+    void nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int, int>& chanGroupMap, int channelNb, std::string hsFileName);
 
 
 };

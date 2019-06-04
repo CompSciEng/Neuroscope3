@@ -249,23 +249,14 @@ bool NeuroscopeDoc::isADocumentToClose(){
 }
 
 
-void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int, int>& chanGroupMap, int channelNb, std::string hsFileName, std::string DSN)
+void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int, int>& chanGroupMap, int channelNb, std::string hsFileName)
 {
-    //<nwb_voltage_electrodes>/processing/ecephys/LFP/lfp/electrodes</nwb_voltage_electrodes>
-    //<nwb_voltage_electrodes_shanks>general/extracellular_ephys/electrodes/shank_electrode_number</nwb_voltage_electrodes_shanks>
-    //return;
-
     long nbSamples = 1;
     Array<short> indexData(nbSamples,channelNb);
-//    std::string DSNIndex="/processing/ecephys/LFP/lfp/electrodes";
-//    ReadBlockData2A(indexData, 0, channelNb, 1, hsFileName, DSNIndex);
-
     Array<short> groupData(nbSamples,channelNb);
-//    std::string DSNGroup="general/extracellular_ephys/electrodes/shank_electrode_number";
-//    ReadBlockData2A(groupData, 0, channelNb, 1, hsFileName, DSNGroup);
 
     NWBReader nwbr(hsFileName);
-    nwbr.getVoltageGroups(indexData, groupData, channelNb, hsFileName);
+    nwbr.getVoltageGroups(indexData, groupData, channelNb);
 
 
     colorMapList.clear();
@@ -325,12 +316,14 @@ void NeuroscopeDoc::confirmParams()
         //return;
         // Neurodata Without Borders (NWB) format
         long lnSamples = 0;
-        nwbr.ReadNWBAttribs(docUrl.toUtf8().constData(), channelNb, resolution, samplingRate, initialOffset, lnSamples);
+        nwbr.ReadNWBAttribs(channelNb, resolution, samplingRate, initialOffset, lnSamples);
         qDebug() << channelNb << resolution << samplingRate << initialOffset << lnSamples << "\n";
         nbSamples = lnSamples;
         datSamplingRate = samplingRate;
 
-        nwbGetColors(displayGroupsChannels, displayChannelsGroups, channelNb, docUrl.toUtf8().constData(), "nothing");
+        // !!!! ~ItemColors() ????
+        // !!!! RHM, check: malloc: Incorrect checksum for freed object 0x10b8ebf50: probably modified after being freed.
+        nwbGetColors(displayGroupsChannels, displayChannelsGroups, channelNb, docUrl.toUtf8().constData());
         bNWBColors = true;
 
         // Working on this June 1, 2019

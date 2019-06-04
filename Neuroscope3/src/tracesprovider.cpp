@@ -150,7 +150,13 @@ void TracesProvider::retrieveData(long startTime,long endTime,QObject* initiator
             qDebug() << "NWS";
             // Modified by RHM to read Neurodata Without Borders format
             NWBReader nwbr(fileName.toUtf8().constData());
-            nwbr.ReadVoltageData(retrieveData, startInRecordingUnits, nbSamples, nbChannels, fileName.toUtf8().constData());
+
+            // !!! These next 2 lines are for testing only
+            //std::string DSN_Event = "/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps";
+            nwbr.ReadEvents();
+
+
+            nwbr.ReadVoltageTraces(retrieveData, startInRecordingUnits, nbSamples, nbChannels);
             qDebug() << "nbSamples " << nbSamples;
         }
         else if ( pNCS != -1 )
@@ -392,7 +398,7 @@ void TracesProvider::computeRecordingLength(){
     {
         // RHM
         NWBReader nwbr(fileName.toUtf8().constData());
-        length = nwbr.GetNWBLength(fileName.toUtf8().constData());
+        length = nwbr.GetNWBLength();
     }
     else if ( pNCS != -1 )
     {

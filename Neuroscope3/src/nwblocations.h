@@ -9,8 +9,8 @@ class NWBLocations
 public:
     NWBLocations(std::string hsFileName);
 
-    std::string getDataSetName(std::string hsFileName);
-    std::string getSamplingName(std::string hsFileName);
+    std::string getVoltageDataSetName();
+    std::string getSamplingName();
 
     std::string getGenericText(std::string strLabel, std::string strDefault = "");
 

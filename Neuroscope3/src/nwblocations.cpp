@@ -1,5 +1,16 @@
 #include "nwblocations.h"
 
+//<nwb_dataset_name>/processing/ecephys/LFP/lfp/data</nwb_dataset_name>
+//<nwb_sampling_name>/processing/ecephys/LFP/lfp/starting_time</nwb_sampling_name>
+//<nwb_voltage_electrodes>/processing/ecephys/LFP/lfp/electrodes</nwb_voltage_electrodes>
+//<nwb_voltage_electrodes_shanks>general/extracellular_ephys/electrodes/shank_electrode_number</nwb_voltage_electrodes_shanks>
+//<nwb_spike_times_values>units/spike_times</nwb_spike_times_values>
+//<nwb_spike_times_indices>units/spike_times_index</nwb_spike_times_indices>
+//<nwb_spike_times_shanks>units/electrode_group</nwb_spike_times_shanks>
+//<nwb_event_times>/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps</nwb_event_times>
+
+
+
 NWBLocations::NWBLocations(std::string hsFileName)
 {
     strLoc =  getLocationName(hsFileName, "_loc.xml");
@@ -20,10 +31,9 @@ QString NWBLocations::getLocationName(std::string& s, const std::string& newExt)
    return QNewName;
 }
 
-std::string NWBLocations::getDataSetName(std::string hsFileName)
+std::string NWBLocations::getVoltageDataSetName()
 {
     QString strDSN = "/processing/ecephys/LFP/lfp/data";
-    QString strLoc = getLocationName(hsFileName, "_loc.xml");
 
     NeuroscopeXmlReader reader = NeuroscopeXmlReader();
     if(reader.parseFile(strLoc,NeuroscopeXmlReader::PARAMETER)){
@@ -34,10 +44,9 @@ std::string NWBLocations::getDataSetName(std::string hsFileName)
     return utf8_text;
 }
 
-std::string NWBLocations::getSamplingName(std::string hsFileName)
+std::string NWBLocations::getSamplingName()
 {
     QString strSN = "/processing/ecephys/LFP/lfp/starting_time";
-    QString strLoc =  getLocationName(hsFileName, "_loc.xml");
 
     NeuroscopeXmlReader reader = NeuroscopeXmlReader();
     if(reader.parseFile(strLoc,NeuroscopeXmlReader::PARAMETER)){

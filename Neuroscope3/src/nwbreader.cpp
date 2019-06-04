@@ -1,15 +1,5 @@
 #include "nwbreader.h"
 
-//#include "nwblocations.h"
-
-//QString NWBLocations
-
-int NWBReader::ReadVoltage() {return 0;}
-int NWBReader::ReadSpikeTimes(){return 0;}
-int NWBReader::ReadEvents(){return 0;}
-
-
-
 
 NWBReader::NWBReader(std::string hsFileName)
     :NWB_Locations(hsFileName)
@@ -24,80 +14,38 @@ NWBReader::NWBReader()
 }
 
 
-// Read all channels for a given time range
-// unsigned long long
-void NWBReader::ReadVoltageData(int *data_out, int iStart, long nLength, int nChannels, std::string hsFileName)
-{
-    hsize_t startOffsets[2]{ (unsigned long) iStart, 0 };   // Start offsets of hyperslab row, column
-    hsize_t count[2]{ (unsigned long) nLength, (unsigned long)nChannels };  // Block count
 
-    std::string DSN = NWB_Locations.getDataSetName(hsFileName);
-
-    HDF5_Utilities.ReadHyperSlab(data_out, startOffsets, count, hsFileName, DSN);
-}
-
-void NWBReader::ReadNWBAttribs(std::string H5_FileName, int &nbChannels, int &resolution, double &samplingRate, int &offset, long &length)
+void NWBReader::ReadNWBAttribs(int &nbChannels, int &resolution, double &samplingRate, int &offset, long &length)
 {
     try
     {
         std::cout << "Start ReadNWBAttribs " << std::endl;
-        /*
-         * Turn off the auto-printing when failure occurs so that we can
-         * handle the errors appropriately
-         */
-        #ifdef TRASH
-        Exception::dontPrint();
-        #endif
 
-        H5File file = H5File(H5_FileName.c_str(), H5F_ACC_RDONLY);
-        std::string DSN = NWB_Locations.getDataSetName(H5_FileName);
-        // std::string DS = getSamplingName(H5_FileName);
-        DataSet dataset = file.openDataSet(DSN.c_str());
+        // Turn off the auto-printing when failure occurs so that we can handle the errors appropriately
+        H5::Exception::dontPrint();
 
-        // Integer
-        H5T_class_t type_class = dataset.getTypeClass();
-        //cout << type_class << endl;
+        H5::H5File* file = new H5::H5File(hsFileName.c_str(), H5F_ACC_RDONLY);
 
-        // Get class of datatype and print message if it's an integer.
-        if (type_class == H5T_INTEGER)
-        {
-            // Get the integer datatype
-            IntType intype = dataset.getIntType();
+        std::string DSN = NWB_Locations.getVoltageDataSetName();
+        DataSet *dataset = new DataSet(file->openDataSet(DSN.c_str()));
 
-            // Get order of datatype and print message if it's a little endian.
-            H5std_string order_string;
-            H5T_order_t order = intype.getOrder(order_string);
+        long lDim1 = 0;
+        H5T_class_t type_class;
+        HDF5_Utilities.GetDataSetSizes(length, lDim1, resolution, type_class, dataset);
+        nbChannels = lDim1;
+        delete dataset;
 
-            // Get size of the data element stored in file and print it.
-            size_t size = intype.getSize();
+        offset = 0; // Did not see this field in NWB
 
-            DataSpace dataspace = dataset.getSpace();
-
-            // Get the number of dimensions in the dataspace.
-            int rank = dataspace.getSimpleExtentNdims();
-
-            // Get the dimension size of each dimension in the dataspace
-            hsize_t dims_out[2];
-            int ndims = dataspace.getSimpleExtentDims(dims_out, NULL);
-
-            nbChannels = (int)(dims_out[1]);
-            length = (long)(dims_out[0]);       /*qlonglong*/
-            resolution = 8 * size;
-        }
-
-        std::string DS = NWB_Locations.getSamplingName(H5_FileName);
-        DataSet startSet = file.openDataSet(DS.c_str());
-        Attribute attr = startSet.openAttribute("rate");
-        DataType type = attr.getDataType();
-        attr.read(type, &samplingRate);
+        // Get the sampling rate
+        std::string DS = NWB_Locations.getSamplingName();
+        HDF5_Utilities.GetAttributeDouble(samplingRate, file, DS, "rate");
 
         std::cout << "Done ReadNWBAttribs " << std::endl;
 
+
+        delete file;
     }  // end of try block
-    catch (...) {
-        // ...
-    }
-#ifdef TRASH
     // catch failure caused by the H5File operations
     catch (FileIException error)
     {
@@ -126,10 +74,10 @@ void NWBReader::ReadNWBAttribs(std::string H5_FileName, int &nbChannels, int &re
         //error.printError();
         return;
     }
-#endif
+
 }
 
-long NWBReader::GetNWBLength(std::string H5_FileName )
+long NWBReader::GetNWBLength( )
 {
     std::cout << "Start GetNWBLength " << std::endl;
     int nbChannels = 0;
@@ -138,21 +86,34 @@ long NWBReader::GetNWBLength(std::string H5_FileName )
     int offset = 0;
     long length = 0;
 
-    ReadNWBAttribs(H5_FileName, nbChannels, resolution, samplingRate, offset, length);
+    ReadNWBAttribs(nbChannels, resolution, samplingRate, offset, length);
     std::cout << "Done GetNWBLength " << std::endl;
     return length;
 }
 
-void NWBReader::ReadVoltageData(Array<short> &retrieveData, int iStart, long nLength, int nChannels, std::string hsFileName)
+
+// Read all channels for a given time range
+void NWBReader::ReadVoltageTraces(int *data_out, int iStart, long nLength, int nChannels)
+{
+    hsize_t startOffsets[2]{ (unsigned long) iStart, 0 };   // Start offsets of hyperslab row, column
+    hsize_t count[2]{ (unsigned long) nLength, (unsigned long)nChannels };  // Block count
+
+    std::string DSN = NWB_Locations.getVoltageDataSetName();
+
+    HDF5_Utilities.ReadHyperSlab<int>(data_out, PredType::NATIVE_INT, startOffsets, count, hsFileName, DSN);
+}
+
+
+void NWBReader::ReadVoltageTraces(Array<short> &retrieveData, int iStart, long nLength, int nChannels)
 {
     std::cout << "Start ReadBlockData " << std::endl;
     long nbValues = nLength * nChannels;
     std::cout << "nbValues  " << nbValues << std::endl;
 
-    // Modified by RHM to read Neurodata Without Borders format
+
     int *data_out = new int[nbValues];
 
-    ReadVoltageData(data_out, iStart, nLength, nChannels, hsFileName);
+    ReadVoltageTraces(data_out, iStart, nLength, nChannels);
 
     long k = 0;
     for (int i = 0; i < nLength; ++i)
@@ -165,7 +126,7 @@ void NWBReader::ReadVoltageData(Array<short> &retrieveData, int iStart, long nLe
 }
 
 
-void NWBReader::ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLength, int nChannels, std::string hsFileName, std::string DSN)
+void NWBReader::ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLength, int nChannels, std::string DSN)
 {
     std::cout << "Start ReadBlockData " << std::endl;
     long nbValues = nLength * nChannels;
@@ -174,7 +135,7 @@ void NWBReader::ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLe
     // Modified by RHM to read Neurodata Without Borders format
     int *data_out = new int[nbValues];
 
-    HDF5_Utilities.ReadBlockDataNamed(data_out, iStart, nLength, nChannels, hsFileName, DSN);
+    HDF5_Utilities.ReadBlockDataNamed<int>(data_out, PredType::NATIVE_INT, iStart, nLength, nChannels, hsFileName, DSN);
 
     long k = 0;
     for (int i = 0; i < nLength; ++i)
@@ -188,31 +149,51 @@ void NWBReader::ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLe
 
 
 
-void NWBReader::getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb, std::string hsFileName)
+void NWBReader::getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb)
 {
     //std::cout << "Start ReadBlockData " << std::endl;
 
     std::string DSNIndex = NWB_Locations.getGenericText("nwb_voltage_electrodes", "/processing/ecephys/LFP/lfp/electrodes");
     std::string DSNGroup = NWB_Locations.getGenericText("nwb_voltage_electrodes_shanks", "general/extracellular_ephys/electrodes/shank_electrode_number");
 
-    ReadBlockData2A(indexData, 0, channelNb, 1, hsFileName, DSNIndex);//.toUtf8().constData());
-    ReadBlockData2A(groupData, 0, channelNb, 1, hsFileName, DSNGroup);//.toUtf8().constData());
+    ReadBlockData2A(indexData, 0, channelNb, 1, DSNIndex);
+    ReadBlockData2A(groupData, 0, channelNb, 1, DSNGroup);
 }
 
-int NWBReader::ReadEvents(/*double *data_out, long &nbEvents,*/ std::string hsFileName, std::string DSN)
+
+NamedArray<double> *  NWBReader::ReadEvents()
 {
+    NamedArray<double> *nad = NULL;
+
+    //<nwb_event_times>/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps</nwb_event_times>
+    std::string DSN = NWB_Locations.getGenericText("nwb_event_times", "");
+
+
+    // !!! Look at EventsProvider.cpp line 58 for an entry point to mimic for integrating this function.
 
     H5File file = H5File(hsFileName.c_str(), H5F_ACC_RDONLY);
     DataSet dataset = file.openDataSet(DSN.c_str());
 
-    // Should be double
+
+    // It would be easier to simply strip off the timestamps label and take the name for this event.
+    // Here is how to get the name from HDF5.
+    char sz180[180];
+    H5Iget_name(dataset.getId(), sz180, 180);
+    cout << "data set name: " << sz180 << endl;
+    // data set name: /stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps
+
+
+
+    // Should be double which is H5T_FLOAT
     H5T_class_t type_class = dataset.getTypeClass();
     cout << type_class << endl;
+
+
 
     // Get class of datatype and print message if it's an integer.
     if (type_class == H5T_FLOAT)
     {
-        // Get the integer datatype
+        // Get the floating point datatype
         FloatType floattype = dataset.getFloatType(); // .getIntType();
 
         // Get order of datatype and print message if it's a little endian.
@@ -238,27 +219,26 @@ int NWBReader::ReadEvents(/*double *data_out, long &nbEvents,*/ std::string hsFi
         std::cout << "nbChannels " << nbChannels << " length " << length << " resolution " << resolution << std::endl;
 
         double *data_out = new double[length];
-        HDF5_Utilities.ReadBlockDataNamed(data_out, 0, length, 1, hsFileName, DSN);
+        HDF5_Utilities.ReadBlockDataNamed<double>(data_out, PredType::NATIVE_DOUBLE, 0, length, 1, hsFileName, DSN);
         for (int i=0; i<length; ++i)
         {
             std::cout << i << " data: " << data_out[i] << std::endl;
         }
-        delete [] data_out;
+
+        nad->strName = sz180;
+        nad->arrayData = data_out;
+
+        //delete [] data_out; // don't delete, we copied pointer into NAD.
 
         // !!!! do we delete or close the file and link handles?
         // !!!! Do we have links to better labels?
     }
-    return 0;
+    return nad;
 }
 
-//template <typename T>
-//struct NamedArray {
-//  std::string strName;
-//  T *arrayData;
-//};
 
 
-int NWBReader::ReadSpikeShank(std::string hsFileName, std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group)
+NamedArray<double> * NWBReader::ReadSpikeShank(std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group)
 {
     //nwb_spike_times = "units/spike_times";
     //nwb_spike_times_index = "units/spike_times_index";
@@ -266,15 +246,15 @@ int NWBReader::ReadSpikeShank(std::string hsFileName, std::string nwb_spike_time
 
     double *spikeTimes = NULL;
     long lLengthST;
-    HDF5_Utilities.Read1DArray(&spikeTimes, lLengthST, hsFileName, nwb_spike_times);
+    HDF5_Utilities.Read1DArray<double>(&spikeTimes, PredType::NATIVE_DOUBLE, lLengthST, hsFileName, nwb_spike_times);
 
     int *spikeIndices = NULL;
     long lLengthSI;
-    HDF5_Utilities.Read1DArray(&spikeIndices, lLengthSI, hsFileName, nwb_spike_times_index);
+    HDF5_Utilities.Read1DArray<int>(&spikeIndices, PredType::NATIVE_INT, lLengthSI, hsFileName, nwb_spike_times_index);
 
     std::string *spikeNames = NULL;
     long lLengthSN;
-    HDF5_Utilities.Read1DArray(&spikeNames, lLengthSN, hsFileName, nwb_units_electrode_group);
+    HDF5_Utilities.Read1DArrayStr(&spikeNames, lLengthSN, hsFileName, nwb_units_electrode_group);
 
 
     NamedArray<double> *nad = new NamedArray<double>[lLengthSI];
@@ -306,14 +286,23 @@ int NWBReader::ReadSpikeShank(std::string hsFileName, std::string nwb_spike_time
     if (spikeNames)
         delete [] spikeNames;
 
-    return 0;
+    return nad;
 }
 
 
 
-int NWBReader::ReadSpikeShank(std::string hsFileName, std::string DSN)
+NamedArray<double> * NWBReader::ReadSpikeShank()
 {
-    return ReadSpikeShank(hsFileName, "units/spike_times", "units/spike_times_index", "units/electrode_group");
+    // Read the locations from the XML file
+    //<nwb_spike_times_values>units/spike_times</nwb_spike_times_values>
+    //<nwb_spike_times_indices>units/spike_times_index</nwb_spike_times_indices>
+    //<nwb_spike_times_shanks>units/electrode_group</nwb_spike_times_shanks>
+
+    std::string DS_STV = NWB_Locations.getGenericText("nwb_spike_times_values", "");
+    std::string DS_STI = NWB_Locations.getGenericText("nwb_spike_times_indices", "");
+    std::string DS_STS = NWB_Locations.getGenericText("nwb_spike_times_shanks", "");
+
+    return ReadSpikeShank(DS_STV, DS_STI, DS_STS);
 }
 
 
