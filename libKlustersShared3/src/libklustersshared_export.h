@@ -14,6 +14,15 @@
 #  endif
 # endif
 
+// RHM Added this to get passed the renaming (to version 3) issue.
+#if defined(LIBKLUSTERSSHARED3_LIBRARY)
+#  define LIBKLUSTERSSHARED3SHARED_EXPORT Q_DECL_EXPORT
+#  define KLUSTERSSHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define LIBKLUSTERSSHARED3SHARED_EXPORT Q_DECL_IMPORT
+#  define KLUSTERSSHARED_EXPORT Q_DECL_IMPORT
+#endif
+
 
 
 #endif // KLUSTERSSHARED_EXPORT_H

@@ -19,6 +19,7 @@
 #include "zoomwindow.h"
 
 
+
 //Assignment of the min and max scale allowed (starting point 100%)
 const float ZoomWindow::MIN_SCALE = 1;//0.51;//51%
 const float ZoomWindow::MAX_SCALE = 22.73;//227.%

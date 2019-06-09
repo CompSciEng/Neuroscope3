@@ -1,9 +1,7 @@
 /***************************************************************************
-                          timer.h  -  description
+                  neveventsprovider.h  -  description
                              -------------------
-    begin                : lun sep 22 2003
-    copyright            : (C) 2003 by Lynn Hazan
-    email                : lynn.hazan@myrealbox.com
+    copyright            : (C) 2015 by Florian Franzen
  ***************************************************************************/
 
 /***************************************************************************
@@ -15,32 +13,27 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef _TIMER_H_
-#define _TIMER_H_
+#ifndef _NEVEVENTSPROVIDER_H_
+#define _NEVEVENTSPROVIDER_H_
 
-#ifdef _MSC_VER
-  #include "gettimeofday.h"
-#else
+#include "blackrock.h"
+#include "eventsprovider.h"
 
-#include <sys/time.h>
-#endif
+class NEVEventsProvider : public EventsProvider  {
+    Q_OBJECT
 
-static struct timeval tv0;
+public:
+    NEVEventsProvider(const QString &fileUrl, int position);
+    ~NEVEventsProvider();
 
-inline void RestartTimer()
-{
-  struct timezone tz;
-  gettimeofday(&tv0,&tz);
-}
+    /**Loads the event ids and the corresponding spike time.
+    * @return an loadReturnMessage enum giving the load status
+    */
+    virtual int loadData();
 
-inline float Timer()
-{
-  struct timeval tv;
-  struct timezone tz;
-  gettimeofday(&tv,&tz);
-  float msec = static_cast<int>(tv.tv_usec/1000)/1000.0;
-  float msec0 = static_cast<int>(tv0.tv_usec/1000)/1000.0;
-  float time = (tv.tv_sec+msec)-(tv0.tv_sec+msec0);
-  return time;
-}
+private:
+    NEVBasicHeader mBasicHeader;
+    NEVExtensionHeader* mExtensionHeaders;
+};
+
 #endif

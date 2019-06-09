@@ -72,7 +72,14 @@ SOURCES += \
     ./src/ReadHDF5.cpp \
     src/hdf5utilities.cpp \
     src/nwblocations.cpp \
-    src/nwbreader.cpp
+    src/nwbreader.cpp \
+    src/nevclustersprovider.cpp \
+    src/neveventsprovider.cpp \
+    src/nsxtracesprovider.cpp \
+    src/nwbtracesprovider.cpp \
+    src/cerebustraceprovider.cpp \
+    src/cerebusclustersprovider.cpp \
+    src/cerebuseventsprovider.cpp
 
 HEADERS += \
     ./src/baseframe.h \
@@ -126,7 +133,16 @@ HEADERS += \
     ../libklustersshared3/src/shared/zoomwindow.h \
     src/hdf5utilities.h \
     src/nwblocations.h \
-    src/nwbreader.h
+    src/nwbreader.h \
+    src/blackrock.h \
+    src/cerebusclustersprovider.h \
+    src/cerebuseventsprovider.h \
+    src/cerebustraceprovider.h \
+    src/nevclustersprovider.h \
+    src/neveventsprovider.h \
+    src/nsxtracesprovider.h \
+    src/nwbtracesprovider.h \
+    src/alttracesprovider.h
 
 FORMS += \
         ./src/clusterpropertieslayout.ui  \
@@ -160,6 +176,17 @@ else:unix:CONFIG(debug, debug|release) {
     LIBS += -L$$PWD/../libklustersshared3/build/debug/ -llibklustersshared-3.1.0.0
     INCLUDEPATH += $$PWD/../libklustersshared3/build/debug
     DEPENDPATH += $$PWD/../libklustersshared3/build/debug
+}
+
+win32:CONFIG(release, debug|release){
+    LIBS += -L$$PWD/../build-libklustersshared-3-Desktop_Qt_5_12_2_MSVC2017_64bit-Debug/release/ -llibklustersshared-3
+    INCLUDEPATH += $$PWD/../build-libklustersshared-3-Desktop_Qt_5_12_2_MSVC2017_64bit-Debug/release
+    DEPENDPATH += $$PWD/../build-libklustersshared-3-Desktop_Qt_5_12_2_MSVC2017_64bit-Debug/release
+}
+else:win32:CONFIG(debug, debug|release){
+    LIBS += -L$$PWD/../build-libklustersshared-3-Desktop_Qt_5_12_2_MSVC2017_64bit-Debug/debug/ -llibklustersshared-3
+    INCLUDEPATH += $$PWD/../build-libklustersshared-3-Desktop_Qt_5_12_2_MSVC2017_64bit-Debug/debug
+    DEPENDPATH += $$PWD/../build-libklustersshared-3-Desktop_Qt_5_12_2_MSVC2017_64bit-Debug/debug
 }
 
 
@@ -199,3 +226,30 @@ else:unix:CONFIG(debug, debug|release) {
     INCLUDEPATH += $$PWD/../HDF5/include
     DEPENDPATH += $$PWD/../HDF5/Debug
 }
+
+
+win32:CONFIG(debug, debug|release){
+    HDF5_PATH = $$PWD/../HDF5/Debug/
+
+    LIBS += -L$${HDF5_PATH}/ -llibszip_D -llibzlib_D -llibhdf5_D -llibhdf5_hl_cpp_D -llibhdf5_cpp_D
+
+    INCLUDEPATH += $$PWD/../HDF5/include/
+    DEPENDPATH += $$PWD/../HDF5/include/
+}
+
+
+win32:CONFIG(release, debug|release){
+  LIBS += -L$$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/x64/release/ -lcbsdk
+  INCLUDEPATH += $$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/src/Release
+  DEPENDPATH += $$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/src/Release
+}
+else:win32:CONFIG(debug, debug|release){
+  LIBS += -L$$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/src/debug/ -lcbsdk
+  #LIBS += $$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/src/debug/  cbsdk
+  INCLUDEPATH += $$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/src/debug
+  DEPENDPATH += $$PWD/../../../NeuroScope/Cerebus/libcbsdk/build/src/debug
+}
+
+INCLUDEPATH += D:\Gigs\NeuroScope\Cerebus\libcbsdk\src
+INCLUDEPATH += D:\Gigs\NeuroScope\Cerebus\libcbsdk\src\cbhwlib
+

@@ -118,7 +118,7 @@ public:
         H5T_class_t type_class = dataset.getTypeClass();
         if (!bTypesMatch( pType, type_class))
         {
-            cout << "type classes do not match in Read1DArray" << type_class << endl;
+            std::cout << "type classes do not match in Read1DArray" << type_class << std::endl;
             return 1;
         }
 

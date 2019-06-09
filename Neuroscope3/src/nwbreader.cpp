@@ -1,5 +1,6 @@
 #include "nwbreader.h"
 
+#include <QDebug>
 
 NWBReader::NWBReader(std::string hsFileName)
     :NWB_Locations(hsFileName)
@@ -93,7 +94,7 @@ long NWBReader::GetNWBLength( )
 
 
 // Read all channels for a given time range
-void NWBReader::ReadVoltageTraces(int *data_out, int iStart, long nLength, int nChannels)
+int NWBReader::ReadVoltageTraces(int *data_out, int iStart, long nLength, int nChannels)
 {
     hsize_t startOffsets[2]{ (unsigned long) iStart, 0 };   // Start offsets of hyperslab row, column
     hsize_t count[2]{ (unsigned long) nLength, (unsigned long)nChannels };  // Block count
@@ -101,10 +102,11 @@ void NWBReader::ReadVoltageTraces(int *data_out, int iStart, long nLength, int n
     std::string DSN = NWB_Locations.getVoltageDataSetName();
 
     HDF5_Utilities.ReadHyperSlab<int>(data_out, PredType::NATIVE_INT, startOffsets, count, hsFileName, DSN);
+    return 0;
 }
 
 
-void NWBReader::ReadVoltageTraces(Array<short> &retrieveData, int iStart, long nLength, int nChannels)
+int NWBReader::ReadVoltageTraces(Array<short> &retrieveData, int iStart, long nLength, int nChannels)
 {
     std::cout << "Start ReadBlockData " << std::endl;
     long nbValues = nLength * nChannels;
@@ -123,6 +125,7 @@ void NWBReader::ReadVoltageTraces(Array<short> &retrieveData, int iStart, long n
     delete[] data_out;
 
     std::cout << "Done ReadBlockData " << std::endl;
+    return 0;
 }
 
 
@@ -139,9 +142,13 @@ void NWBReader::ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLe
 
     long k = 0;
     for (int i = 0; i < nLength; ++i)
-        for (int j = 0; j < nChannels; ++j)
-            retrieveData[k] = data_out[k++];
-
+        for (int j = 0; j < nChannels; ++j) {
+            qDebug() << "data_out " << data_out[k] << " " << k << "\n";
+            //std::cout << "data_out " << data_out[k] << std::endl;
+            // RHM thinks that retrieveData is base-1 of 2D and base-0 for 1D
+            retrieveData[k] = data_out[k];
+            ++k;
+        }
     delete[] data_out;
 
     std::cout << "Done ReadBlockData " << std::endl;
@@ -149,7 +156,7 @@ void NWBReader::ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLe
 
 
 
-void NWBReader::getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb)
+int NWBReader::getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb)
 {
     //std::cout << "Start ReadBlockData " << std::endl;
 
@@ -158,6 +165,8 @@ void NWBReader::getVoltageGroups(Array<short>& indexData, Array<short>& groupDat
 
     ReadBlockData2A(indexData, 0, channelNb, 1, DSNIndex);
     ReadBlockData2A(groupData, 0, channelNb, 1, DSNGroup);
+
+    return 0;
 }
 
 
@@ -167,6 +176,11 @@ NamedArray<double> *  NWBReader::ReadEvents()
 
     //<nwb_event_times>/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps</nwb_event_times>
     std::string DSN = NWB_Locations.getGenericText("nwb_event_times", "");
+    if (DSN.length() < 1)
+    {
+        std::cout << "could not find event label in xml file." << std::endl;
+        return nad;
+    }
 
 
     // !!! Look at EventsProvider.cpp line 58 for an entry point to mimic for integrating this function.
@@ -179,14 +193,14 @@ NamedArray<double> *  NWBReader::ReadEvents()
     // Here is how to get the name from HDF5.
     char sz180[180];
     H5Iget_name(dataset.getId(), sz180, 180);
-    cout << "data set name: " << sz180 << endl;
+    std::cout << "data set name: " << sz180 << std::endl;
     // data set name: /stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps
 
 
 
     // Should be double which is H5T_FLOAT
     H5T_class_t type_class = dataset.getTypeClass();
-    cout << type_class << endl;
+    std::cout << type_class << std::endl;
 
 
 

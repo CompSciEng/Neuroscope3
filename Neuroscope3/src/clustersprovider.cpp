@@ -23,8 +23,6 @@
 #include <QMap> 
 #include <QDebug>
 
-//Unix include file
-#include <unistd.h>
 
 //include files for the application
 #include "clustersprovider.h"

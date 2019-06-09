@@ -27,7 +27,7 @@
 #include <QList>
 
 #include <QEvent>
-
+#include <QFileDialog>
 
 
 
@@ -35,6 +35,10 @@
 #include "channelpalette.h"
 #include "dataprovider.h"
 #include "eventsprovider.h"
+
+#ifdef WITH_CEREBUS
+    #include "cerebustraceprovider.h" // For SamplingGroup
+#endif
 
 
 // forward declaration of the Neuroscope classes
@@ -113,6 +117,13 @@ public:
     * @return an OpenSaveCreateReturnMessage enum giving the open status.
     */
     int openDocument(const QString& url);
+
+#ifdef WITH_CEREBUS
+    /** Open network stream.
+    * @return true on sucess, false otherwise.
+    */
+    bool openStream(CerebusTracesProvider::SamplingGroup group);
+#endif
 
     /**Saves the current session: displays, spike, cluster, event files opened and selected clusters and events.
     * It also saves the relevant changes in the parameter files (creating one if there is none).
@@ -229,15 +240,6 @@ public:
    */
     int getInitialOffset()const{return initialOffset;}
 
-    /**Gets the acquisition system gains.
-   * @return current acquisition gain.
-   */
-    int getAcquisitionGain()const{return acquisitionGain;}
-
-    /**Gets the current gain based on the screen gain and the acquisition system gain.
-   * @return current gain.
-   */
-    int getGain()const{return gain;}
 
     /**Gets the voltage range of the acquisition system in volts for the current document.
    * @return current voltage range.
@@ -283,12 +285,6 @@ public:
    * @param screenGainDefault default screen gain in milivolts by centimeters used to display the field potentiels.
    */
     void setDefaultGains(int voltageRangeDefault,int amplificationDefault,float screenGainDefault){
-        acquisitionGainDefault = static_cast<int>(0.5 +
-                                                  static_cast<float>(pow(static_cast<double>(2),static_cast<double>(resolutionDefault))
-                                                                     / static_cast<float>(voltageRangeDefault * 1000))
-                                                  * amplificationDefault);
-
-        gainDefault = static_cast<int>(0.5 + screenGainDefault * acquisitionGainDefault);
         this->voltageRangeDefault = voltageRangeDefault;
         this->amplificationDefault = amplificationDefault;
         this->screenGainDefault = screenGainDefault;
@@ -297,41 +293,17 @@ public:
     /**Sets the voltage range of the acquisition system in volts for the current document.
    * @param range current voltage range.
    */
-    void setVoltageRange(int range){
-        voltageRange = range;
-        acquisitionGain = static_cast<int>(0.5 +
-                                           static_cast<float>(pow(static_cast<double>(2),static_cast<double>(resolution))
-                                                              / static_cast<float>(voltageRange * 1000))
-                                           * amplification);
-
-        gain = static_cast<int>(0.5 + screenGain * acquisitionGain);
-    }
+   void setVoltageRange(int range);
 
     /**Sets the amplification of the acquisition system for the current document.
    * @param amplification current amplification.
    */
-    void setAmplification(int amplification){
-        this->amplification = amplification;
-        acquisitionGain = static_cast<int>(0.5 +
-                                           static_cast<float>(pow(static_cast<double>(2),static_cast<double>(resolution))
-                                                              / static_cast<float>(voltageRange * 1000))
-                                           * amplification);
-
-        gain = static_cast<int>(0.5 + screenGain * acquisitionGain);
-    }
+    void setAmplification(int amplification);
 
     /**Sets the screen gain in milivolts by centimeters used to display the field potentiels for the current document.
    * @param gain current screen gain.
    */
-    void setScreenGain(float gain){
-        screenGain = gain;
-        acquisitionGain = static_cast<int>(0.5 +
-                                           static_cast<float>(pow(static_cast<double>(2),static_cast<double>(resolution))
-                                                              / static_cast<float>(voltageRange * 1000))
-                                           * amplification);
-
-        gain = static_cast<int>(0.5 + screenGain * acquisitionGain);
-    }
+    void setScreenGain(float gain);
 
     /**Sets the default initial offset for all the traces.
    * @param offset initial offset.
@@ -377,6 +349,9 @@ public:
    * @return TracesProvider object.
    */
     TracesProvider& tracesDataProvider() const {return *tracesProvider;}
+
+    /** Return reference tp the mapping between channel id and label */
+    QStringList* getChannelLabels() { return &channelLabels; }
 
     /**Returns a reference on the Map given the correspondance between the channel ids and the display group ids.
    */
@@ -458,12 +433,6 @@ public:
         this->flip = flip;
         drawPositionsOnBackground = positionsBackground;
 
-        acquisitionGain = static_cast<int>(0.5 +
-                                           static_cast<float>(pow(static_cast<double>(2),static_cast<double>(resolution))
-                                                              / static_cast<float>(voltageRange * 1000))
-                                           * amplification);
-
-        gain = static_cast<int>(0.5 + screenGain * acquisitionGain);
     }
 
     /**Returns true if the current opened file is a dat file (intial recorded file), false otherwise.*/
@@ -503,9 +472,6 @@ public:
     */
     void showCalibration(bool show,NeuroscopeView* activeView);
 
-    /**Returns the name used to identified the last loaded provider.
-    */
-    QString lastLoadedProviderName() const {return lastLoadedProvider;}
 
     /**Returns the item color list for the given provider.
     * @param fileName name of the file containing the data of the provider.
@@ -518,6 +484,8 @@ public:
     * @return an OpenSaveCreateReturnMessage enum giving the load status.
     */
     OpenSaveCreateReturnMessage loadClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
+    OpenSaveCreateReturnMessage loadNevClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
+    OpenSaveCreateReturnMessage loadCluClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
 
     /**Loads the cluster file store in the session file and identified by @p clusterUrl.
     * @param clusterUrl url of the cluster file to load.
@@ -526,7 +494,7 @@ public:
     * @param firstFile true if the file to load if the first one, false otherwise.
     * @return an OpenSaveCreateReturnMessage enum giving the load status.
     */
-    OpenSaveCreateReturnMessage loadClusterFile(const QString &clusterUrl,QMap<EventDescription,QColor>& itemColors,const QDateTime &lastModified,bool firstFile);
+    OpenSaveCreateReturnMessage loadClusterFileForSession(const QString &clusterUrl,QMap<EventDescription,QColor>& itemColors,const QDateTime &lastModified,bool firstFile);
 
 
     /**Loads the position file and creates the position view in the current display.
@@ -563,7 +531,7 @@ public:
     * @param firstFile true if the file to load if the first one, false otherwise.
     * @return an OpenSaveCreateReturnMessage enum giving the load status.
     */
-    OpenSaveCreateReturnMessage loadEventFile(const QString &eventUrl,QMap<EventDescription,QColor>& itemColors,const QDateTime &lastModified,bool firstFile);
+    OpenSaveCreateReturnMessage loadEventFileForSession(const QString &eventUrl,QMap<EventDescription,QColor>& itemColors,const QDateTime &lastModified,bool firstFile);
 
     /**Removes the event provider corresponding to the identifier @p providerName
     * from the list of providers.
@@ -816,6 +784,13 @@ public:
 private:
     // 25 March Robert H. Moore
     void confirmParams();
+    int openNWBDocument(const QString& url);
+    int openNSXDocument(const QString& url);
+    int treatParamSessionFile(QString fileName, QStringList fileParts, QFileInfo urlFileInfo);
+    void warnCommandLineProp(QString trWarning);
+    int readParameterFile(const QString& parFileUrl);
+    int readSessionFileSampling(const QString& sessionUrl);
+    int getNonDatSampling();
 
 public Q_SLOTS:
 
@@ -869,6 +844,16 @@ Q_SIGNALS:
                           QList<int> selectedChannels,QMap<int,bool>& skipStatus,long startTime,long duration,QString tabLabel,bool positionView,int rasterHeight,
                           bool showEventsInPositionView);
 
+    /** Emitted when cluster file was sucessfully loaded.
+     * @param fileId id of the file loaded.
+    */
+    void clusterFileLoaded(const QString& fileId);
+
+    /** Emitted when event file was sucessfully loaded.
+     * @param fileId id of the file loaded.
+    */
+    void eventFileLoaded(const QString& fileId);
+
 private:
     /** The list of the views currently connected to the document */
     QList<NeuroscopeView*>* viewList;
@@ -900,11 +885,6 @@ private:
     /**Initial offset for all the traces.*/
     int initialOffset;
 
-    /**Gain which takes the screen gain into account.*/
-    int gain;
-
-    /**Acquisition system gain.*/
-    int acquisitionGain;
 
     /**Screen gain in milivolts by centimeters used to display the field potentiels.*/
     float screenGain;
@@ -936,11 +916,6 @@ private:
     /**Default initial offset for all the traces.*/
     int initialOffsetDefault;
 
-    /**Default gain.*/
-    int gainDefault;
-
-    /**Default acquisition system gain.*/
-    int acquisitionGainDefault;
     
     /**Default screen gain in milivolts by centimeters used to display the field potentiels.*/
     float screenGainDefault;
@@ -950,6 +925,9 @@ private:
 
     /**Default amplification of the acquisition system.*/
     int amplificationDefault;
+
+    /** Map of channel ids to channel labels */
+    QStringList channelLabels;
 
     /**Map given the correspondance between the channel ids and the display group ids.*/
     QMap<int,int> displayChannelsGroups;

@@ -20,8 +20,8 @@ public:
     void ReadNWBAttribs(int &nbChannels, int &resolution, double &samplingRate, int &offset, long &length);
     long GetNWBLength();
 
-    void ReadVoltageTraces(Array<short> &retrieveData, int iStart, long nLength, int nChannels);
-    void getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb);
+    int ReadVoltageTraces(Array<short> &retrieveData, int iStart, long nLength, int nChannels);
+    int getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb);
 
     NamedArray<double> *ReadSpikeShank(std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group);
     NamedArray<double> *ReadSpikeShank();
@@ -37,7 +37,7 @@ private:
     NWBLocations NWB_Locations;
     HDF5Utilities HDF5_Utilities;
 
-    void ReadVoltageTraces(int *data_out, int iStart, long nLength, int nChannels);
+    int ReadVoltageTraces(int *data_out, int iStart, long nLength, int nChannels);
 
 };
 

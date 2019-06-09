@@ -35,6 +35,10 @@
 //application specific include files
 #include "neuroscopeview.h"
 
+#ifdef WITH_CEREBUS
+    #include "cerebustraceprovider.h" // For SamplingGroup
+#endif
+
 // forward declaration of the Neuroscope classes
 class NeuroscopeDoc;
 class PrefDialog;
@@ -67,6 +71,13 @@ public:
     * Asking for a new one will open a new instance of the application with it.
     */
     void openDocumentFile(const QString& url=QString());
+
+#ifdef WITH_CEREBUS
+    /** Open a stream, only one document (file or stream) at the time allowed.
+    * Asking for a new one will open a new instance of the application with it.
+    */
+    void openNetworkStream(CerebusTracesProvider::SamplingGroup group);
+#endif
     
     /** Returns a pointer to the current document connected to the NeuroscopeApp instance and is used by
      * the View class to access the document object's methods
@@ -196,18 +207,43 @@ public:
 	 /// Added by M.Zugaro to enable automatic forward paging
 	 bool isStill() { return ( !activeView() || activeView()->isStill() ); }
 
-private Q_SLOTS:
-
-    /// Added by M.Zugaro to enable automatic forward paging
-    void neuroscopeViewStopped() { slotStateChanged("pageOffState"); }
 
 public Q_SLOTS:
 
-    /// Added by M.Zugaro to enable automatic forward paging
-    void page() { if ( isStill() ) slotStateChanged("pageOnState"); else slotStateChanged("pageOffState"); activeView()->page(); }
-    void stop() { if( activeView() ) { activeView()->stop(); slotStateChanged("pageOffState"); } }
-    void accelerate() {	if( activeView()) activeView()->accelerate(); }
-    void decelerate() {	if( activeView()) activeView()->decelerate(); }
+    /** Toggle paging (a.k.a. auto advance to end of recording) */
+    void page() {
+        if(activeView()) {
+            if(activeView()->isStill())
+                activeView()->page();
+            else
+                activeView()->stop();
+        } else {
+            // No view, no paging
+            slotStateChanged("pageOffState");
+        }
+    }
+
+    /** Stop paging */
+    void stop() {
+        if(activeView() ) {
+            activeView()->stop();
+        } else {
+            // No view, no paging
+            slotStateChanged("pageOffState");
+        }
+    }
+
+    /** Increase paging speed */
+    void accelerate() {
+        if(activeView())
+            activeView()->accelerate();
+    }
+
+    /** Decrease paging speed */
+    void decelerate() {
+        if(activeView())
+            activeView()->decelerate();
+    }
 
     /**Called when an event has been modified.
   * @param providerName name use to identified the event provider containing the modified event.
@@ -302,8 +338,16 @@ private Q_SLOTS:
     /**Open a file and load it into the document.*/
     void slotFileOpen();
 
+#ifdef WITH_CEREBUS
+    /**Open a network stream as a document. */
+    void slotStreamOpen();
+#endif
+
     /**Loads one or multiple cluster files.*/
     void slotLoadClusterFiles();
+
+    /** Updates view, because a new cluster file was loaded. */
+    void slotClusterFileLoaded(const QString& fileID);
 
     /**Closes the cluster file corresponding to the currently selected cluster group.*/
     void slotCloseClusterFile();
@@ -313,6 +357,9 @@ private Q_SLOTS:
 
     /**Creates an empty event file.*/
     void slotCreateEventFile();
+
+    /** Updates view, because a new event file was loaded or created. */
+    void slotEventFileLoaded(const QString& fileID);
     
     /**Closes the event file corresponding to the currently selected event group.*/
     void slotCloseEventFile();
@@ -666,6 +713,10 @@ private Q_SLOTS:
 
     void slotSaveRecentFiles();
 
+    /// Added by M.Zugaro to enable automatic forward paging
+    void neuroscopeViewStarted() { slotStateChanged("pageOnState"); }
+    void neuroscopeViewStopped() { slotStateChanged("pageOffState"); }
+
 private:
     void readSettings();
     void initView();
@@ -752,6 +803,9 @@ private:
     QAction* mSaveAsAction;
     QAction* mCloseAction;
     QAction* mOpenAction;
+#ifdef WITH_CEREBUS
+    QAction* mStreamAction;
+#endif
     QAction* mUndo;
     QAction* mRedo;
     QAction* mViewStatusBar;

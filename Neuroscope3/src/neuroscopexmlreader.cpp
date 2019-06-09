@@ -363,12 +363,10 @@ int NeuroscopeXmlReader::getVoltageRange() const{
                 QDomElement e = n.toElement(); // try to convert the node to an element.
                 if(!e.isNull()) {
                     QString tag = e.tagName();
-                    if (tag == NEUROSCOPE) {
-                        QDomNode video = e.firstChildElement(ACQUISITION); // try to convert the node to an element.
-                        if (!video.isNull()) {
-                            QDomNode b = video.firstChild();
-                            while(!b.isNull()) {
-                                QDomElement w = b.toElement();
+                    if (tag == ACQUISITION) {
+                        QDomNode acquisition = e.firstChild(); // try to convert the node to an element.
+                        while(!acquisition.isNull()) {
+                            QDomElement w = acquisition.toElement();
                                 if(!w.isNull()) {
                                     tag = w.tagName();
                                     if (tag == VOLTAGE_RANGE) {
@@ -376,8 +374,7 @@ int NeuroscopeXmlReader::getVoltageRange() const{
                                         return range;
                                     }
                                 }
-                                b = b.nextSibling();
-                            }
+                            acquisition = acquisition.nextSibling();
                         }
                     }
                 }
@@ -425,12 +422,10 @@ int NeuroscopeXmlReader::getAmplification() const{
                 QDomElement e = n.toElement(); // try to convert the node to an element.
                 if(!e.isNull()) {
                     QString tag = e.tagName();
-                    if (tag == NEUROSCOPE) {
-                        QDomNode video = e.firstChildElement(ACQUISITION); // try to convert the node to an element.
-                        if (!video.isNull()) {
-                            QDomNode b = video.firstChild();
-                            while(!b.isNull()) {
-                                QDomElement w = b.toElement();
+                    if (tag == ACQUISITION) {
+                        QDomNode acquisition = e.firstChild(); // try to convert the node to an element.
+                        while(!acquisition.isNull()) {
+                            QDomElement w = acquisition.toElement();
                                 if(!w.isNull()) {
                                     tag = w.tagName();
                                     if (tag == AMPLIFICATION) {
@@ -438,8 +433,7 @@ int NeuroscopeXmlReader::getAmplification() const{
                                         return amplification;
                                     }
                                 }
-                                b = b.nextSibling();
-                            }
+                            acquisition = acquisition.nextSibling();
                         }
                     }
                 }
@@ -487,12 +481,10 @@ int NeuroscopeXmlReader::getOffset()const{
                 QDomElement e = n.toElement(); // try to convert the node to an element.
                 if(!e.isNull()) {
                     QString tag = e.tagName();
-                    if (tag == NEUROSCOPE) {
-                        QDomNode video = e.firstChildElement(ACQUISITION); // try to convert the node to an element.
-                        if (!video.isNull()) {
-                            QDomNode b = video.firstChild();
-                            while(!b.isNull()) {
-                                QDomElement w = b.toElement();
+                    if (tag == ACQUISITION) {
+                        QDomNode acquisition = e.firstChild(); // try to convert the node to an element.
+                        while(!acquisition.isNull()) {
+                            QDomElement w = acquisition.toElement();
                                 if(!w.isNull()) {
                                     tag = w.tagName();
                                     if (tag == OFFSET) {
@@ -500,8 +492,7 @@ int NeuroscopeXmlReader::getOffset()const{
                                         return offset;
                                     }
                                 }
-                                b = b.nextSibling();
-                            }
+                            acquisition = acquisition.nextSibling();
                         }
                     }
                 }
