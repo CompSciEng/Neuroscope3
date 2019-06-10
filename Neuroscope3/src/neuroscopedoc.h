@@ -791,6 +791,7 @@ private:
     int readParameterFile(const QString& parFileUrl);
     int readSessionFileSampling(const QString& sessionUrl);
     int getNonDatSampling();
+    QColor makeClusterColor(int iGroup, bool bLinear=true);
 
 public Q_SLOTS:
 

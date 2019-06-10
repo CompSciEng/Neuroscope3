@@ -140,7 +140,9 @@ QStringList NWBTracesProvider::getLabels() {
         int iIndex = indexData[i];
         int iGroup = groupData[iIndex]+1;
 
-        labels[iIndex] = QString::number(iGroup);
+        //labels[iIndex] = QString::number(iGroup);
+
+        labels[iIndex] = QString::number(i);
     }
 
     return labels;

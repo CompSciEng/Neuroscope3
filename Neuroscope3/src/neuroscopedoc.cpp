@@ -248,9 +248,23 @@ bool NeuroscopeDoc::isADocumentToClose(){
     return (channelColorList != 0L);
 }
 
-
-void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int, int>& chanGroupMap, int channelNb, std::string hsFileName)
+QColor NeuroscopeDoc::makeClusterColor(int iGroup, bool bLinear)
 {
+    QColor color;
+
+    if(!bLinear && iGroup == 1)
+        color.setHsv(0,0,220);//Cluster 1 is always gray
+    else if(!bLinear && iGroup == 0)
+        color.setHsv(0,255,255);//Cluster 0 is always red
+    else
+        color.setHsv(static_cast<int>(fmod(static_cast<double>(iGroup)*7,36))*10,255,255);
+
+    return color;
+}
+
+void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& displayGroupsChannels, QMap<int, int>& displayChannelsGroups, int channelNb, std::string hsFileName)
+{
+    // displayGroupsChannels, displayChannelsGroups
     long nbSamples = 1;
     Array<short> indexData(nbSamples,channelNb);
     Array<short> groupData(nbSamples,channelNb);
@@ -258,9 +272,7 @@ void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int,
     NWBReader nwbr(hsFileName);
     nwbr.getVoltageGroups(indexData, groupData, channelNb);
 
-
-    colorMapList.clear();
-    chanGroupMap.clear();
+    displayGroupsChannels.clear();
     for (int i=0; i<channelNb; ++i)
     {
         //qDebug() << "index data " << i << " " << channelNb << indexData[i+1]  << "\n";
@@ -268,18 +280,25 @@ void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int,
         int iGroup = groupData[iIndex]+1;
         //qDebug() << "index and group " << iIndex << " " << iGroup << "\n";
 
-        if (colorMapList.contains(iGroup))
+        if (displayGroupsChannels.contains(iGroup))
         {
             // get list and add iIndex to it at iGroup
-            colorMapList[iGroup].append(iIndex);
+            displayGroupsChannels[iGroup].append(iIndex);
         } else {
-            // make a list that contains just iGroup and append colorMap
+            // make a new list that contains just iGroup and append colorMap
             QList<int> qi = QList<int>() << iIndex;
-            colorMapList.insert(iGroup, qi);
+            displayGroupsChannels.insert(iGroup, qi);
         }
     }
 
+    displayChannelsGroups.clear();
     ItemColors* nwbColors = new ItemColors();
+    QList<int> groupOne;
+    // Build some default group mappings, in case the file is incomplete
+    for (int i=0; i<channelNb; ++i)
+    {
+        displayChannelsGroups.insert(i, 1); // Group 1 gets them all
+    }
     for (int i=0; i<channelNb; ++i)
     {
         int iIndex = indexData[i];
@@ -288,19 +307,20 @@ void NeuroscopeDoc::nwbGetColors(QMap<int, QList<int> >& colorMapList, QMap<int,
         QColor color;
         if(nwbColors->contains(iGroup)){
             color = nwbColors->color(iGroup);
-            nwbColors->append(static_cast<int>(iGroup), color);
         } else {
-            if(iGroup == 1)
-                color.setHsv(0,0,220);//Cluster 1 is always gray
-            else if(iGroup == 0)
-                color.setHsv(0,255,255);//Cluster 0 is always red
-            else
-                color.setHsv(static_cast<int>(fmod(static_cast<double>(iGroup)*7,36))*10,255,255);
-            nwbColors->append(static_cast<int>(iGroup),color);
+            color = makeClusterColor(iGroup, false);
         }
+        nwbColors->append(static_cast<int>(iGroup), color);
+
+        displayChannelsGroups[iIndex] = iGroup;
+
 
         channelColorList->append(i,color,color,color);
+        channelsSpikeGroups.insert(i, -1);
+        channelDefaultOffsets.insert(i, 0);
+        groupOne.append(i);
     }
+    spikeGroupsChannels.insert(-1, groupOne);
     delete nwbColors;
 
 }
@@ -318,9 +338,12 @@ void NeuroscopeDoc::warnCommandLineProp(QString trWarning)
 
 void NeuroscopeDoc::confirmParams()
 {
-    bool bNWBColors = false;
-    if (extension == "nwb")
+    //bool bNWBColors = false;
+#ifdef TRASH
+    if (false) //(extension == "nwb")
     {
+        //bNWBColors = true;
+       //#ifdef TRASH
         qDebug() << "About to NWB";
         NWBReader nwbr(docUrl.toUtf8().constData());
         //nwbr.ReadSpikeShank(docUrl.toUtf8().constData(), "units/electrode_group");
@@ -342,7 +365,9 @@ void NeuroscopeDoc::confirmParams()
 
         //std::string DSN_Event = "/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps";
         //ReadEvents(/*double *data_out, long &nbEvents,*/ docUrl.toUtf8().constData(), DSN_Event);
+       //#endif
     }
+#endif
 
     bool isaDatFile = true;
     if (extension != "dat")
@@ -361,9 +386,12 @@ void NeuroscopeDoc::confirmParams()
     else
         extensionSamplingRates.insert(extension, samplingRate);
 
+ #ifdef TRASH
+ //   if (bNWBColors)
+ //       return;
+
     //Create the tracesProvider with the information gather before.
-    if (!bNWBColors)
-        tracesProvider = new TracesProvider(docUrl, channelNb, resolution, voltageRange, amplification, samplingRate, initialOffset);
+    tracesProvider = new TracesProvider(docUrl, channelNb, resolution, voltageRange, amplification, samplingRate, initialOffset);
     qDebug() << "done new TracesProvider()";
 
     //No group of channels exist, put all the channels in the same group (1 for the display palette and
@@ -373,19 +401,17 @@ void NeuroscopeDoc::confirmParams()
     QList<int> groupOne;
     color.setHsv(210, 255, 255);
     for (int i = 0; i < channelNb; ++i) {
-        if (!bNWBColors)
-            channelColorList->append(i, color);
-        if (!bNWBColors)
-            displayChannelsGroups.insert(i, 1);
+        channelColorList->append(i, color);
+        displayChannelsGroups.insert(i, 1);
         channelsSpikeGroups.insert(i, -1);
         groupOne.append(i);
         channelDefaultOffsets.insert(i, 0);
     }
-    if (!bNWBColors)
-        displayGroupsChannels.insert(1, groupOne);
+    displayGroupsChannels.insert(1, groupOne);
     spikeGroupsChannels.insert(-1, groupOne);
-
+#endif
     qDebug() << "end confirmParams()";
+
 }
 
 int NeuroscopeDoc::openNWBDocument(const QString& url)
@@ -415,11 +441,36 @@ int NeuroscopeDoc::openNWBDocument(const QString& url)
         nwbGetColors(displayGroupsChannels, displayChannelsGroups, channelNb, docUrl.toUtf8().constData());
 
 
-        confirmParams();
+        // !!! Clean up confirm and replace below
+        //confirmParams();
+
+        bool isaDatFile = false;
+
+
+        //Show a dialog to inform the user what are the parameters which will be used.
+        static_cast<NeuroscopeApp*>(parent)->displayFileProperties(channelNb, samplingRate, resolution, initialOffset, voltageRange,
+            amplification, screenGain, nbSamples, peakSampleIndex, videoSamplingRate, videoWidth, videoHeight, backgroundImage,
+            rotation, flip, datSamplingRate, isaDatFile, drawPositionsOnBackground, traceBackgroundImage);
+#ifdef TRASH
+        QColor color;
+        QList<int> groupOne;
+        color.setHsv(210, 255, 255);
+        for (int i = 0; i < channelNb; ++i) {
+            channelColorList->append(i, color);
+            displayChannelsGroups.insert(i, 1);
+            channelsSpikeGroups.insert(i, -1);
+            groupOne.append(i);
+            channelDefaultOffsets.insert(i, 0);
+        }
+
+        displayGroupsChannels.insert(1, groupOne);
+        spikeGroupsChannels.insert(-1, groupOne);
+#endif
+
         // !!!!! Consider looking at previous hack here.
         // ImageViews are not getting set properly, or something else is bad.
 
-
+#ifdef TRASH
         // Set up display and spike groups
         //4QList<int> displayGroup;
         //4QColor color = QColor::fromHsv(210, 255, 255); // default blue
@@ -451,7 +502,7 @@ int NeuroscopeDoc::openNWBDocument(const QString& url)
         //3emit noSession(channelDefaultOffsets, skipStatus);
 
         //3return OK;
-
+#endif
 
         // Create the view with some sensible defaults
         QList<int>* channelsToDisplay = new QList<int>(); // Yeah, I know! Why?
@@ -661,11 +712,13 @@ int NeuroscopeDoc::openDocument(const QString& url)
 
     // Check if this is a Neurodata Without Borders Data file
     if(fileName.contains(QRegExp("\\.nwb", Qt::CaseInsensitive))) {
+        extension = "nwb";
         return openNWBDocument(url);
     }
 
     // First we check if this is a Blackrock NSX file
     if(fileName.contains(QRegExp("\\.ns\\d"))) {
+        extension = "nsx";
         return openNSXDocument(url);
     }
 
@@ -803,6 +856,28 @@ int NeuroscopeDoc::openDocument(const QString& url)
         //No parameter or session file. Use defaults and or command line information (any of the command line arguments have overwritten the default values).
         else{
             confirmParams();
+
+
+            //Create the tracesProvider with the information gather before.
+            tracesProvider = new TracesProvider(docUrl, channelNb, resolution, voltageRange, amplification, samplingRate, initialOffset);
+            qDebug() << "done new TracesProvider()";
+
+            //No group of channels exist, put all the channels in the same group (1 for the display palette and
+            //-1 (the trash group) for the spike palette) and assign them the same blue color.
+            //Build the channelColorList and channelDefaultOffsets (default is 0)
+            QColor color;
+            QList<int> groupOne;
+            color.setHsv(210, 255, 255);
+            for (int i = 0; i < channelNb; ++i) {
+                channelColorList->append(i, color);
+                displayChannelsGroups.insert(i, 1);
+                channelsSpikeGroups.insert(i, -1);
+                groupOne.append(i);
+                channelDefaultOffsets.insert(i, 0);
+            }
+            displayGroupsChannels.insert(1, groupOne);
+            spikeGroupsChannels.insert(-1, groupOne);
+
         }
     }
 
@@ -982,6 +1057,7 @@ bool NeuroscopeDoc::openStream(CerebusTracesProvider::SamplingGroup group) {
     for(it = eventMap.begin(); it != eventMap.end(); ++it){
 		int hue = fmod(it.value() * 7.0, 36) * 10;
 		QColor color = QColor::fromHsv(hue, 255, 255);
+        //TODO: replace above 2 lines with QColor color = GetClusterColor(it.value(), true);
         eventColors->append(it.value(), it.key(), color);
         eventsList.append(it.value());
     }
@@ -2414,10 +2490,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadNevClusterFile(con
         //Constructs the clusterColorList and clustersToSkip
         QList<int>::iterator it;
         for(it = clusterList.begin(); it != clusterList.end(); ++it){
-            QColor color;
-            if(*it == 1) color.setHsv(0,0,220);//Cluster 1 is always gray
-            else if(*it == 0) color.setHsv(0,255,255);//Cluster 0 is always red
-            else color.setHsv(static_cast<int>(fmod(static_cast<double>(*it)*7,36))*10,255,255);
+            QColor color = makeClusterColor(*it, false);
             clusterColors->append(static_cast<int>(*it),color);
             clustersToSkip.append(static_cast<int>(*it));
         }
@@ -2494,10 +2567,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadCluClusterFile(con
     QList<int> clusterList = clustersProvider->clusterIdList();
     QList<int>::iterator it;
     for(it = clusterList.begin(); it != clusterList.end(); ++it){
-        QColor color;
-        if(*it == 1) color.setHsv(0,0,220);//Cluster 1 is always gray
-        else if(*it == 0) color.setHsv(0,255,255);//Cluster 0 is always red
-        else color.setHsv(static_cast<int>(fmod(static_cast<double>(*it)*7,36))*10,255,255);
+        QColor color = makeClusterColor(*it, false);
         clusterColors->append(static_cast<int>(*it),color);
         clustersToSkip.append(static_cast<int>(*it));
     }
@@ -2607,13 +2677,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadClusterFileForSess
             clusterColors->append(static_cast<int>(*it),itemColors[QString::number(*it)]);
         } else {
             modified = true;
-            QColor color;
-            if(*it == 1)
-                color.setHsv(0,0,220);//Cluster 1 is always gray
-            else if(*it == 0)
-                color.setHsv(0,255,255);//Cluster 0 is always red
-            else
-                color.setHsv(static_cast<int>(fmod(static_cast<double>(*it)*7,36))*10,255,255);
+            QColor color = makeClusterColor(*it, false);
             clusterColors->append(static_cast<int>(*it),color);
         }
     }
@@ -2727,8 +2791,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadEventFile(const QS
     QMap<EventDescription,int> eventMap = eventsProvider->eventDescriptionIdMap();
     QMap<EventDescription,int>::Iterator it;
     for(it = eventMap.begin(); it != eventMap.end(); ++it){
-        QColor color;
-        color.setHsv(static_cast<int>(fmod(static_cast<double>(it.value())*7,36))*10,255,255);
+        QColor color = makeClusterColor(it.value(), true);
         eventColors->append(static_cast<int>(it.value()),static_cast<QString>(it.key()),color);
         eventsToSkip.append(static_cast<int>(it.value()));
     }
@@ -2831,8 +2894,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadEventFileForSessio
         }
         else{
             modified = true;
-            QColor color;
-            color.setHsv(static_cast<int>(fmod(static_cast<double>(it.value())*7,36))*10,255,255);
+            QColor color = makeClusterColor(it.value(), true);
             eventColors->append(static_cast<int>(it.value()),static_cast<QString>(it.key()),color);
         }
     }
@@ -3088,7 +3150,9 @@ void NeuroscopeDoc::slotNewEventDescriptionCreated(const QString &providerName,Q
             if(eventDescriptionAdded == removedDescription.first){
                 color = QColor(removedDescription.second);
             }
-            else color.setHsv(static_cast<int>(fmod(static_cast<double>(it.value())*7,36))*10,255,255);
+            else
+                color = makeClusterColor(it.value(), true);
+
             eventColors->append(static_cast<int>(it.value()),static_cast<QString>(it.key()),color);
         }
     }
