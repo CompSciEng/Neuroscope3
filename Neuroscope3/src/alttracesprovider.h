@@ -111,32 +111,7 @@ protected:
     bool mInitialized;
 
 private:
-   #ifdef TRASH
-    static const int NWB_RESOLUTION;
-    static const int NWB_OFFSET;
 
-    // Headers that are parsed from the file to open
-    //NSXBasicHeader mBasicHeader;
-    //NSXExtensionHeader* mExtensionHeaders;
-    //NSXDataHeader mDataHeader;
-
-    // Start of first sample in first data package.
-    //long mDataFilePos;
-    bool mInitialized;
-
-    //Functions
-
-    /**Retrieves the traces included in the time frame given by @p startTime and @p endTime.
-    * @param startTime begining of the time frame from which to retrieve the data, given in milisecond.
-    * @param endTime end of the time frame from which to retrieve the data, given in milisecond.
-    * @param initiator instance requesting the data.
-    * @param startTimeInRecordingUnits begining of the time interval from which to retrieve the data in recording units.
-    */
-    virtual void retrieveData(long startTime, long endTime, QObject* initiator, long startTimeInRecordingUnits);
-
-    /**Computes the total length of the document in miliseconds.*/
-    virtual void computeRecordingLength();
-#endif
 };
 
 

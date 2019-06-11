@@ -78,6 +78,17 @@ void NWBReader::ReadNWBAttribs(int &nbChannels, int &resolution, double &samplin
 
 }
 
+double NWBReader::getSamplingRate()
+{
+    double samplingRate = 0.0;
+    // Get the sampling rate
+    std::string DS = NWB_Locations.getSamplingName();
+    H5::H5File* file = new H5::H5File(hsFileName.c_str(), H5F_ACC_RDONLY);
+    HDF5_Utilities.GetAttributeDouble(samplingRate, file, DS, "rate");
+    delete file;
+    return samplingRate;
+}
+
 long NWBReader::GetNWBLength( )
 {
     std::cout << "Start GetNWBLength " << std::endl;
@@ -174,6 +185,8 @@ NamedArray<double> *  NWBReader::ReadEvents()
 {
     NamedArray<double> *nad = NULL;
 
+    //double dS = getSamplingRate();
+
     //<nwb_event_times>/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps</nwb_event_times>
     std::string DSN = NWB_Locations.getGenericText("nwb_event_times", "");
     if (DSN.length() < 1)
@@ -184,22 +197,27 @@ NamedArray<double> *  NWBReader::ReadEvents()
 
 
     // !!! Look at EventsProvider.cpp line 58 for an entry point to mimic for integrating this function.
+try {
+    H5::H5File* file = new H5::H5File(hsFileName.c_str(), H5F_ACC_RDONLY);
 
-    H5File file = H5File(hsFileName.c_str(), H5F_ACC_RDONLY);
-    DataSet dataset = file.openDataSet(DSN.c_str());
+    DataSet *dataset = new DataSet(file->openDataSet(DSN.c_str()));
+
+
+    //H5File file = H5File(hsFileName.c_str(), H5F_ACC_RDONLY);
+    //DataSet dataset = file.openDataSet(DSN.c_str());
 
 
     // It would be easier to simply strip off the timestamps label and take the name for this event.
     // Here is how to get the name from HDF5.
     char sz180[180];
-    H5Iget_name(dataset.getId(), sz180, 180);
+    H5Iget_name(dataset->getId(), sz180, 180);
     std::cout << "data set name: " << sz180 << std::endl;
     // data set name: /stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps
 
 
 
     // Should be double which is H5T_FLOAT
-    H5T_class_t type_class = dataset.getTypeClass();
+    H5T_class_t type_class = dataset->getTypeClass();
     std::cout << type_class << std::endl;
 
 
@@ -208,7 +226,7 @@ NamedArray<double> *  NWBReader::ReadEvents()
     if (type_class == H5T_FLOAT)
     {
         // Get the floating point datatype
-        FloatType floattype = dataset.getFloatType(); // .getIntType();
+        FloatType floattype = dataset->getFloatType(); // .getIntType();
 
         // Get order of datatype and print message if it's a little endian.
         //H5std_string order_string;
@@ -217,7 +235,7 @@ NamedArray<double> *  NWBReader::ReadEvents()
         // Get size of the data element stored in file and print it.
         size_t size = floattype.getSize();
 
-        DataSpace dataspace = dataset.getSpace();
+        DataSpace dataspace = dataset->getSpace();
 
         // Get the number of dimensions in the dataspace.
         int rank = dataspace.getSimpleExtentNdims();
@@ -234,19 +252,48 @@ NamedArray<double> *  NWBReader::ReadEvents()
 
         double *data_out = new double[length];
         HDF5_Utilities.ReadBlockDataNamed<double>(data_out, PredType::NATIVE_DOUBLE, 0, length, 1, hsFileName, DSN);
+        nad  = new NamedArray<double>();
         for (int i=0; i<length; ++i)
         {
-            std::cout << i << " data: " << data_out[i] << std::endl;
+            //std::cout << i << " data: " << data_out[i] << std::endl;
+            nad->arrayData.append(data_out[i]);
         }
-
         nad->strName = sz180;
-        nad->arrayData = data_out;
 
-        //delete [] data_out; // don't delete, we copied pointer into NAD.
+        delete [] data_out;
 
         // !!!! do we delete or close the file and link handles?
         // !!!! Do we have links to better labels?
+
+        delete dataset;
+        delete file;
     }
+}
+    // catch failure caused by the H5File operations
+       catch( FileIException error )
+       {
+          //error.printError();
+          return NULL;
+       }
+       // catch failure caused by the DataSet operations
+       catch( DataSetIException error )
+       {
+          //error.printError();
+          return NULL;
+       }
+       // catch failure caused by the DataSpace operations
+       catch( DataSpaceIException error )
+       {
+          //error.printError();
+          return NULL;
+       }
+       // catch failure caused by the DataSpace operations
+       catch( DataTypeIException error )
+       {
+          //error.printError();
+          return NULL;
+       }
+
     return nad;
 }
 
@@ -281,9 +328,10 @@ NamedArray<double> * NWBReader::ReadSpikeShank(std::string nwb_spike_times, std:
         for (int ii=0; ii < nLen; ++ii)
         {
             dArray[ii]= spikeTimes[ndxLower + ii];
+            nad[idx].arrayData[ii] = dArray[ii];
         }
         nad[idx].strName = spikeNames[idx];
-        nad[idx].arrayData = dArray;
+        //nad[idx].arrayData = dArray;
 
         // print debugging information
         std::cout << nad[idx].strName << " ";

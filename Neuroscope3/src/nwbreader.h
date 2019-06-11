@@ -6,9 +6,13 @@
 
 // !!!! Make this a class with a destructor to help defend against memory leaks.
 template <typename T>
-struct NamedArray {
-  std::string strName;
-  T *arrayData;
+class NamedArray {
+public:
+    NamedArray(){};
+    std::string strName;
+    QList<T> arrayData;
+   // T *arrayData;
+    int length() {return arrayData.length();}
 };
 
 
@@ -31,6 +35,7 @@ public:
 
     void ReadBlockData2A(Array<short> &retrieveData, int iStart, long nLength, int nChannels, std::string DSN);
 
+    double getSamplingRate();
 private:
     NWBReader(); // defensive move
     std::string hsFileName;

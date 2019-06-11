@@ -34,7 +34,6 @@
 
 //include files for c/c++ libraries
 #include <math.h>
-#include "nwbreader.h"
 
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)
 #define fseeko64(stream, offset, whence) _fseeki64(stream, offset, whence)
@@ -146,27 +145,9 @@ void TracesProvider::retrieveData(long startTime,long endTime,QObject* initiator
         Array<int16_t> retrieveData(nbSamples,nbChannels);
         qint64 nbValues = nbSamples * nbChannels;
 
-        // Is this a Neurodata Without Borders file?
-        int pNWB = fileName.lastIndexOf(".nwb");
-
         // Is this a Neuralynx file?
         int pNCS = fileName.lastIndexOf(".ncs");
-
-        if (pNWB != -1)
-        {
-            qDebug() << "NWS";
-            // Modified by RHM to read Neurodata Without Borders format
-            NWBReader nwbr(fileName.toUtf8().constData());
-
-            // !!! These next 2 lines are for testing only
-            //std::string DSN_Event = "/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps";
-            //nwbr.ReadEvents();
-
-
-            nwbr.ReadVoltageTraces(retrieveData, startInRecordingUnits, nbSamples, nbChannels);
-            qDebug() << "nbSamples " << nbSamples;
-        }
-        else if ( pNCS != -1 )
+        if ( pNCS != -1 )
         {
             qDebug()<<"NCS";
             /// Modified by M.Zugaro to read Neuralynx ncs format
@@ -394,20 +375,9 @@ void TracesProvider::computeRecordingLength(){
     if((resolution == 12) | (resolution == 14) | (resolution == 16)) dataSize = 2;
     else if(resolution == 32) dataSize = 4;
 
-
-    // Is this a Neurodate Without Borders file?
-    int pNWB = fileName.lastIndexOf(".nwb");
-
     // Is this a Neuralynx file?
     int pNCS = fileName.lastIndexOf(".ncs");
-
-    if (pNWB != -1)
-    {
-        // RHM
-        NWBReader nwbr(fileName.toUtf8().constData());
-        length = nwbr.GetNWBLength();
-    }
-    else if ( pNCS != -1 )
+    if ( pNCS != -1 )
     {
         /// Modified by M.Zugaro to read Neuralynx ncs format
 

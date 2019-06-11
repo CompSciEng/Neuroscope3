@@ -53,6 +53,7 @@
 
 #include "nwbreader.h"
 #include "nwbtracesprovider.h"
+#include "nwbeventsprovider.h"
 
 #ifdef WITH_CEREBUS
 #include "cerebustraceprovider.h"
@@ -338,37 +339,6 @@ void NeuroscopeDoc::warnCommandLineProp(QString trWarning)
 
 void NeuroscopeDoc::confirmParams()
 {
-    //bool bNWBColors = false;
-#ifdef TRASH
-    if (false) //(extension == "nwb")
-    {
-        //bNWBColors = true;
-       //#ifdef TRASH
-        qDebug() << "About to NWB";
-        NWBReader nwbr(docUrl.toUtf8().constData());
-        //nwbr.ReadSpikeShank(docUrl.toUtf8().constData(), "units/electrode_group");
-        //return;
-        // Neurodata Without Borders (NWB) format
-        long lnSamples = 0;
-        nwbr.ReadNWBAttribs(channelNb, resolution, samplingRate, initialOffset, lnSamples);
-        qDebug() << channelNb << resolution << samplingRate << initialOffset << lnSamples << "\n";
-        nbSamples = lnSamples;
-        datSamplingRate = samplingRate;
-
-        // !!!! ~ItemColors() ????
-        // !!!! RHM, check: malloc: Incorrect checksum for freed object 0x10b8ebf50: probably modified after being freed.
-        nwbGetColors(displayGroupsChannels, displayChannelsGroups, channelNb, docUrl.toUtf8().constData());
-        bNWBColors = true;
-
-        // Working on this June 1, 2019
-        //nwbr.ReadSpikeShank(docUrl.toUtf8().constData(), "units/electrode_group");
-
-        //std::string DSN_Event = "/stimulus/presentation/PulseStim_0V_10001ms_LD0/timestamps";
-        //ReadEvents(/*double *data_out, long &nbEvents,*/ docUrl.toUtf8().constData(), DSN_Event);
-       //#endif
-    }
-#endif
-
     bool isaDatFile = true;
     if (extension != "dat")
         isaDatFile = false;
@@ -386,37 +356,11 @@ void NeuroscopeDoc::confirmParams()
     else
         extensionSamplingRates.insert(extension, samplingRate);
 
- #ifdef TRASH
- //   if (bNWBColors)
- //       return;
-
-    //Create the tracesProvider with the information gather before.
-    tracesProvider = new TracesProvider(docUrl, channelNb, resolution, voltageRange, amplification, samplingRate, initialOffset);
-    qDebug() << "done new TracesProvider()";
-
-    //No group of channels exist, put all the channels in the same group (1 for the display palette and
-    //-1 (the trash group) for the spike palette) and assign them the same blue color.
-    //Build the channelColorList and channelDefaultOffsets (default is 0)
-    QColor color;
-    QList<int> groupOne;
-    color.setHsv(210, 255, 255);
-    for (int i = 0; i < channelNb; ++i) {
-        channelColorList->append(i, color);
-        displayChannelsGroups.insert(i, 1);
-        channelsSpikeGroups.insert(i, -1);
-        groupOne.append(i);
-        channelDefaultOffsets.insert(i, 0);
-    }
-    displayGroupsChannels.insert(1, groupOne);
-    spikeGroupsChannels.insert(-1, groupOne);
-#endif
-    qDebug() << "end confirmParams()";
-
+    //qDebug() << "end confirmParams()";
 }
 
 int NeuroscopeDoc::openNWBDocument(const QString& url)
 {
-//   if(fileName.contains(QRegExp("\\.nwb", Qt::CaseInsensitive))) {
         // Neurodata Without Borders Data
         NWBTracesProvider* nwbTracesProvider = new NWBTracesProvider(url);
 
@@ -442,67 +386,8 @@ int NeuroscopeDoc::openNWBDocument(const QString& url)
 
 
         // !!! Clean up confirm and replace below
-        //confirmParams();
+        confirmParams();
 
-        bool isaDatFile = false;
-
-
-        //Show a dialog to inform the user what are the parameters which will be used.
-        static_cast<NeuroscopeApp*>(parent)->displayFileProperties(channelNb, samplingRate, resolution, initialOffset, voltageRange,
-            amplification, screenGain, nbSamples, peakSampleIndex, videoSamplingRate, videoWidth, videoHeight, backgroundImage,
-            rotation, flip, datSamplingRate, isaDatFile, drawPositionsOnBackground, traceBackgroundImage);
-#ifdef TRASH
-        QColor color;
-        QList<int> groupOne;
-        color.setHsv(210, 255, 255);
-        for (int i = 0; i < channelNb; ++i) {
-            channelColorList->append(i, color);
-            displayChannelsGroups.insert(i, 1);
-            channelsSpikeGroups.insert(i, -1);
-            groupOne.append(i);
-            channelDefaultOffsets.insert(i, 0);
-        }
-
-        displayGroupsChannels.insert(1, groupOne);
-        spikeGroupsChannels.insert(-1, groupOne);
-#endif
-
-        // !!!!! Consider looking at previous hack here.
-        // ImageViews are not getting set properly, or something else is bad.
-
-#ifdef TRASH
-        // Set up display and spike groups
-        //4QList<int> displayGroup;
-        //4QColor color = QColor::fromHsv(210, 255, 255); // default blue
-        for (int i = 0; i < channelNb; ++i){
-          // All channels have the same color, no offset and no skip status.
-          //4this->channelColorList->append(i, color);
-          this->channelDefaultOffsets.insert(i, 0);
-
-          // Put all channels in the same display group.
-          //4this->displayChannelsGroups.insert(i, 1);
-          //4displayGroup.append(i);
-
-          // Put each channel in its own spiking group.
-          this->channelsSpikeGroups.insert(i, i + 1);
-          QList<int> group;
-          group.append(i);
-          this->spikeGroupsChannels.insert(i + 1, group);
-        }
-        //4this->displayGroupsChannels.insert(1, displayGroup);
-
-
-        // If skipStatus is empty, set the default status to 0
-        if(skipStatus.isEmpty()){
-            for(int i = 0; i < channelNb; ++i)
-                skipStatus.insert(i,false);
-        }
-
-        //Use the channel default offsets
-        //3emit noSession(channelDefaultOffsets, skipStatus);
-
-        //3return OK;
-#endif
 
         // Create the view with some sensible defaults
         QList<int>* channelsToDisplay = new QList<int>(); // Yeah, I know! Why?
@@ -534,8 +419,6 @@ int NeuroscopeDoc::openNWBDocument(const QString& url)
         );
 
         return OK;
-//    }
-//    return INCORRECT_FILE;
 }
 
 int NeuroscopeDoc::openNSXDocument(const QString& url)
@@ -2744,7 +2627,10 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadEventFile(const QS
     //Check that the selected file is a event file
     QString fileName = eventUrl;
     EventsProvider* eventsProvider(NULL);
-    if(fileName.indexOf(".nev") != -1) {
+
+    if(fileName.indexOf(".nwb") != -1) {
+        eventsProvider = new NWBEventsProvider(eventUrl, eventPosition);
+    } else if(fileName.indexOf(".nev") != -1) {
         eventsProvider = new NEVEventsProvider(eventUrl, eventPosition);
     } else if(fileName.indexOf(".evt") != -1){
         eventsProvider = new EventsProvider(eventUrl, samplingRate, eventPosition);
