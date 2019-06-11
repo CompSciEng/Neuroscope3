@@ -486,6 +486,7 @@ public:
     OpenSaveCreateReturnMessage loadClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
     OpenSaveCreateReturnMessage loadNevClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
     OpenSaveCreateReturnMessage loadCluClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
+    OpenSaveCreateReturnMessage loadNWBClusterFile(const QString &clusterUrl,NeuroscopeView* activeView);
 
     /**Loads the cluster file store in the session file and identified by @p clusterUrl.
     * @param clusterUrl url of the cluster file to load.
@@ -792,6 +793,8 @@ private:
     int readSessionFileSampling(const QString& sessionUrl);
     int getNonDatSampling();
     QColor makeClusterColor(int iGroup, bool bLinear=true);
+    int setClusterColors(ItemColors* clusterColors, QList<int> &clustersToSkip, QList<int> &clusterList, QString name);
+
 
 public Q_SLOTS:
 

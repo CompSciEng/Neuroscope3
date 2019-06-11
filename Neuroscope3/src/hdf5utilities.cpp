@@ -12,6 +12,10 @@ bool HDF5Utilities::bTypesMatch(PredType pType, H5T_class_t type_class)
     {
         return (type_class == H5T_FLOAT);
     }
+    else if (pType == PredType::NATIVE_DOUBLE)
+    {
+        return (type_class == H5T_FLOAT); // Is this correct? !!!! RHM
+    }
     else if (pType == PredType::STD_REF_OBJ)
     {
         return (type_class == H5T_REFERENCE);

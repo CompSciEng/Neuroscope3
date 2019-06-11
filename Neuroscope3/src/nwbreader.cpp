@@ -299,7 +299,7 @@ try {
 
 
 
-NamedArray<double> * NWBReader::ReadSpikeShank(std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group)
+QList<NamedArray<double>>  NWBReader::ReadSpikeShank(std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group)
 {
     //nwb_spike_times = "units/spike_times";
     //nwb_spike_times_index = "units/spike_times_index";
@@ -318,20 +318,23 @@ NamedArray<double> * NWBReader::ReadSpikeShank(std::string nwb_spike_times, std:
     HDF5_Utilities.Read1DArrayStr(&spikeNames, lLengthSN, hsFileName, nwb_units_electrode_group);
 
 
-    NamedArray<double> *nad = new NamedArray<double>[lLengthSI];
+    QList<NamedArray<double>> nad;
     for (int idx=0; idx < lLengthSI; ++idx)
     {
         int ndxLower = (idx > 0) ? spikeIndices[idx-1] : 0;
         int ndxUpperP1 = spikeIndices[idx];
         int nLen = ndxUpperP1 - ndxLower;
-        double *dArray = new double[nLen];
+
+        NamedArray<double> OneNad;
         for (int ii=0; ii < nLen; ++ii)
         {
-            dArray[ii]= spikeTimes[ndxLower + ii];
-            nad[idx].arrayData[ii] = dArray[ii];
+            OneNad.arrayData.append(spikeTimes[ndxLower + ii]);
         }
-        nad[idx].strName = spikeNames[idx];
-        //nad[idx].arrayData = dArray;
+        OneNad.strName = spikeNames[idx];
+
+        // !!! RHM, check if the copy is deep enough
+        nad.append(OneNad);
+
 
         // print debugging information
         std::cout << nad[idx].strName << " ";
@@ -353,7 +356,7 @@ NamedArray<double> * NWBReader::ReadSpikeShank(std::string nwb_spike_times, std:
 
 
 
-NamedArray<double> * NWBReader::ReadSpikeShank()
+QList<NamedArray<double>> NWBReader::ReadSpikeShank()
 {
     // Read the locations from the XML file
     //<nwb_spike_times_values>units/spike_times</nwb_spike_times_values>

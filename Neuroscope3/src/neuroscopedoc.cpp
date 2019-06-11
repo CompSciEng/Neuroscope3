@@ -54,6 +54,7 @@
 #include "nwbreader.h"
 #include "nwbtracesprovider.h"
 #include "nwbeventsprovider.h"
+#include "nwbclustersprovider.h"
 
 #ifdef WITH_CEREBUS
 #include "cerebustraceprovider.h"
@@ -2334,6 +2335,9 @@ void NeuroscopeDoc::setNoneEditMode(NeuroscopeView* activeView){
 
 
 NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadClusterFile(const QString &clusterUrl,NeuroscopeView* activeView){
+    if(clusterUrl.indexOf(".nwb") != -1)
+        return loadNWBClusterFile(clusterUrl, activeView);
+
     if(clusterUrl.indexOf(".nev") != -1)
         return loadNevClusterFile(clusterUrl, activeView);
 
@@ -2342,6 +2346,79 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadClusterFile(const 
 
         return INCORRECT_FILE;
 }
+
+
+int NeuroscopeDoc::setClusterColors(ItemColors* clusterColors, QList<int> &clustersToSkip, QList<int> &clusterList, QString name)
+{
+    QList<int>::iterator it;
+    for(it = clusterList.begin(); it != clusterList.end(); ++it){
+        QColor color = makeClusterColor(*it, false);
+        clusterColors->append(static_cast<int>(*it),color);
+        clustersToSkip.append(static_cast<int>(*it));
+    }
+    providerItemColors.insert(name,clusterColors);
+
+    return 0;
+}
+
+NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadNWBClusterFile(const QString &clusterUrl,NeuroscopeView* activeView){
+    // Open file with appropiate provider
+    QList<NWBClustersProvider*> list = NWBClustersProvider::fromFile(clusterUrl,
+                                                                  this->channelLabels,
+                                                                  this->samplingRate,
+                                                                  this->tracesProvider->getTotalNbSamples(),
+                                                                  this->clusterPosition);
+
+    // Set spike event sample count and peak postition
+    this->peakSampleIndex = 12;
+    this->nbSamples = 48;
+
+    for(QList<NWBClustersProvider*>::iterator providerIterator = list.begin();
+        providerIterator != list.end();
+        providerIterator++) {
+        // Get all needed properties from cluster provider
+        NWBClustersProvider* clustersProvider = *providerIterator;
+        QString name = clustersProvider->getName();
+
+
+        // Add cluster provider to internal structure
+        providers.insert(name, clustersProvider);
+        providerUrls.insert(name, clusterUrl);
+
+        // Genereate cluster colors (based on color brewer)
+        ItemColors* clusterColors = new ItemColors();
+        QList<int> clustersToSkip;
+        QList<int> clusterList = clustersProvider->clusterIdList();
+        //Constructs the clusterColorList and clustersToSkip
+        setClusterColors(clusterColors, clustersToSkip, clusterList, name);
+
+
+        // Compute which cluster files give data for a given anatomical group
+        computeClusterFilesMapping();
+
+        // Informs the views than there is a new cluster provider.
+        // There should be only one view, since we only created one display.
+        QList<int> clustersToShow;
+        for(int i = 0; i < this->viewList->count(); ++i) {
+            this->viewList->at(i)->setClusterProvider(
+                clustersProvider,
+                name,
+                clusterColors,
+                true, // active
+                clustersToShow,
+                &(this->displayGroupsClusterFile),
+                &(this->channelsSpikeGroups),
+                this->peakSampleIndex - 1,
+                this->nbSamples - peakSampleIndex,
+                clustersToSkip
+            );
+        }
+        emit clusterFileLoaded(name);
+    }
+
+    return OK;
+}
+
 
 NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadNevClusterFile(const QString &clusterUrl,NeuroscopeView* activeView){
     // Open file with appropiate provider
@@ -2361,7 +2438,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadNevClusterFile(con
         // Get all needed properties from cluster provider
         NEVClustersProvider* clustersProvider = *providerIterator;
         QString name = clustersProvider->getName();
-        QList<int> clusterList = clustersProvider->clusterIdList();
+
 
         // Add cluster provider to internal structure
         providers.insert(name, clustersProvider);
@@ -2370,14 +2447,10 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadNevClusterFile(con
         // Genereate cluster colors (based on color brewer)
         ItemColors* clusterColors = new ItemColors();
         QList<int> clustersToSkip;
+        QList<int> clusterList = clustersProvider->clusterIdList();
         //Constructs the clusterColorList and clustersToSkip
-        QList<int>::iterator it;
-        for(it = clusterList.begin(); it != clusterList.end(); ++it){
-            QColor color = makeClusterColor(*it, false);
-            clusterColors->append(static_cast<int>(*it),color);
-            clustersToSkip.append(static_cast<int>(*it));
-        }
-        providerItemColors.insert(name, clusterColors);
+        setClusterColors(clusterColors, clustersToSkip, clusterList, name);
+
 
 		// Compute which cluster files give data for a given anatomical group
 		computeClusterFilesMapping();
@@ -2448,14 +2521,7 @@ NeuroscopeDoc::OpenSaveCreateReturnMessage NeuroscopeDoc::loadCluClusterFile(con
     QList<int> clustersToSkip;
     //Constructs the clusterColorList and clustersToSkip
     QList<int> clusterList = clustersProvider->clusterIdList();
-    QList<int>::iterator it;
-    for(it = clusterList.begin(); it != clusterList.end(); ++it){
-        QColor color = makeClusterColor(*it, false);
-        clusterColors->append(static_cast<int>(*it),color);
-        clustersToSkip.append(static_cast<int>(*it));
-    }
-
-    providerItemColors.insert(name,clusterColors);
+    setClusterColors(clusterColors, clustersToSkip, clusterList, name);
 
 
     if(displayGroupsClusterFile.isEmpty())

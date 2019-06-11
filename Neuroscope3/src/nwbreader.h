@@ -27,8 +27,8 @@ public:
     int ReadVoltageTraces(Array<short> &retrieveData, int iStart, long nLength, int nChannels);
     int getVoltageGroups(Array<short>& indexData, Array<short>& groupData, int channelNb);
 
-    NamedArray<double> *ReadSpikeShank(std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group);
-    NamedArray<double> *ReadSpikeShank();
+    QList<NamedArray<double>> ReadSpikeShank(std::string nwb_spike_times, std::string nwb_spike_times_index, std::string nwb_units_electrode_group);
+    QList<NamedArray<double>> ReadSpikeShank();
 
 
     NamedArray<double> *  ReadEvents();

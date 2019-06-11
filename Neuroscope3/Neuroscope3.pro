@@ -80,7 +80,8 @@ SOURCES += \
     src/cerebustraceprovider.cpp \
     src/cerebusclustersprovider.cpp \
     src/cerebuseventsprovider.cpp \
-    src/nwbeventsprovider.cpp
+    src/nwbeventsprovider.cpp \
+    src/nwbclustersprovider.cpp
 
 HEADERS += \
     ./src/baseframe.h \
@@ -144,7 +145,8 @@ HEADERS += \
     src/nsxtracesprovider.h \
     src/nwbtracesprovider.h \
     src/alttracesprovider.h \
-    src/nwbeventsprovider.h
+    src/nwbeventsprovider.h \
+    src/nwbclustersprovider.h
 
 FORMS += \
         ./src/clusterpropertieslayout.ui  \
